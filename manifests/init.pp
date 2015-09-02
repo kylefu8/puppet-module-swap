@@ -7,12 +7,12 @@ class swap(
   $swapfile_size_m       = '1024',
 ) {
 
-  $swapfile_path_dirname = inline_template('<%= `dirname #{swapfile_path}` %>')
+  $swapfile_path_dirname = dirname($swapfile_path)
 
   case $::kernel {
     'Linux': {
       $command_dir = "test -d $swapfile_path_dirname"
-      $command_compare = "test \$((df -mP $swapfile_path_dirname | grep -v Avail | awk '{print \$4}')) -gt $swapfile_size_m"
+      $command_compare = "test \$((df -mP $swapfile_path_dirname | grep -v Avail | awk '{print \\$4}'))-$threshold_m -gt $swapfile_size_m"
     }
     default: {
       $command_dir = 'UNDEF'
@@ -38,6 +38,7 @@ class swap(
 #      notify {"swapfile_size_m is reasonable.":}
 #  }
 
+  notify {"Swapfile_Path_Dirname:": message => $swapfile_path_dirname, }
   notify {"DIR:": message => $command_dir, }
   notify {"COMPARE:": message => $command_compare, }
 
