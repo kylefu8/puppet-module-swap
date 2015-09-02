@@ -27,21 +27,9 @@ class swap(
   validate_absolute_path($swapfile_path)
   validate_re($swapfile_size_m, '^[0-9]*$', 'Parameter swapfile_size_m must be numeric')
 
-
-#  if ( $root_avail_m_value - $swapfile_size_m < $root_reserve_m ) {
-#      notify {"$root_avail_m_value - $swapfile_size_m":}
-#      notify {"$root_reserve_m":}
-#      notify {"swapfile_size_m is too large.":}
-#  }
-#  else {
-#      notify {"$root_avail_m_value - $swapfile_size_m":}
-#      notify {"$root_reserve_m":}
-#      notify {"swapfile_size_m is reasonable.":}
-#  }
-
-  notify {"Swapfile_Path_Dirname:": message => $swapfile_path_dirname, }
-  notify {"DIR:": message => $command_dir, }
-  notify {"COMPARE:": message => $command_compare, }
+#  notify {"Swapfile_Path_Dirname:": message => $swapfile_path_dirname, }
+#  notify {"DIR:": message => $command_dir, }
+#  notify {"COMPARE:": message => $command_compare, }
 
   if ( $::kernel == 'Linux' ) {
     if $ensure == 'present' {
@@ -49,10 +37,7 @@ class swap(
         command => "dd if=/dev/zero of=${swapfile_path} bs=1M count=${swapfile_size_m}",
         path    => '/bin:/sbin:/usr/bin',
         creates => $swapfile_path,
-        #onlyif  => [ $command_dir, $command_df ]
-        onlyif  => $command_compare
-#        onlyif  => "test -f `dirname $swapfile_path`"
-#        onlyif  => "`df -P $swapfile_path | grep -v Filesystem | cut -d\' \' -f1` - $swapfile_size_m > $root_reserve_m "
+        onlyif  => [ $command_dir, $command_compare ]
       }
 
       exec { 'mkswap':
