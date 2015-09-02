@@ -8,16 +8,17 @@ class swap(
 ) {
 
   $swapfile_path_dirname = dirname($swapfile_path)
+  $free_space_integer    = $threshold_m + $swapfile_size_m
 
   case $::kernel {
     'Linux': {
-      $command_dir = "test -d $swapfile_path_dirname"
-      $command_compare = "test \$((df -mP $swapfile_path_dirname | grep -v Avail | awk '{print \\$4}'))-$threshold_m -gt $swapfile_size_m"
+      $command_dir     = "test -d $swapfile_path_dirname"
+      $command_compare = "test \$(df -mP $swapfile_path_dirname | grep -v Avail | awk '{print \$4}') -gt $free_space_integer"
     }
     default: {
-      $command_dir = 'UNDEF'
-      $command_df_m = 'UNDEF'
-      $command_compare = 'UNDEF'
+      $command_dir     = undef
+      $command_df_m    = undef
+      $command_compare = undef
     }
   }
 
