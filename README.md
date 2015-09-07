@@ -9,12 +9,7 @@ Puppet module to manage swap (swap files)
 
 # Compatibility
 ---------------
-This module is built for use with Puppet v3 on the following OS families.
-
-* EL 5
-* EL 6
-* Suse SLE10
-* Suse SLE11
+This module is built for use with Puppet v3 on most Linux distributions.
 
 ===
 
@@ -25,16 +20,22 @@ ensure
 ------
 Ensure attribute for the swapfile
 
-- *Default*: 'present'
+- *Default*: 'absent'
 
-size_m
-------
-The swapfile size in megabytes
+threshold_m
+-----------
+Reserved free space in megabytes (to avoid swap file consumes all the free space).
 
-- *Default*: '1024'
+- *Default*: '2048'
 
 swapfile_path
 -------------
 Swap file's full path
 
 - *Default*: '/swapfile'
+
+swapfile_size_m
+---------------
+Size of swap file in megabytes.
+
+- *Default*: '1024'

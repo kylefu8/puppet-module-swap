@@ -13,7 +13,7 @@ class swap(
   case $::kernel {
     'Linux': {
       $command_dir     = "test -d $swapfile_path_dirname"
-      $command_compare = "test \$(df -mP $swapfile_path_dirname | grep -v Avail | awk '{print \$4}') -gt $free_space_integer"
+      $command_compare = "test \$(df -mP $swapfile_path_dirname | grep -v Avail | awk '{print \$4}') -ge $free_space_integer"
     }
     default: {
       $command_dir     = undef
@@ -27,17 +27,21 @@ class swap(
   validate_absolute_path($swapfile_path)
   validate_re($swapfile_size_m, '^[0-9]*$', 'Parameter swapfile_size_m must be numeric')
 
-#  notify {"Swapfile_Path_Dirname:": message => $swapfile_path_dirname, }
-#  notify {"DIR:": message => $command_dir, }
-#  notify {"COMPARE:": message => $command_compare, }
-
   if ( $::kernel == 'Linux' ) {
     if $ensure == 'present' {
       exec { 'dd_swapfile':
         command => "dd if=/dev/zero of=${swapfile_path} bs=1M count=${swapfile_size_m}",
         path    => '/bin:/sbin:/usr/bin',
         creates => $swapfile_path,
-        onlyif  => [ $command_dir, $command_compare ]
+        onlyif  => [ $command_dir, $command_compare ],
+      }
+
+      file { $swapfile_path:
+        mode    => '0600',
+        owner   => 'root',
+        group   => 'root',
+        backup  => false,
+        require => Exec['dd_swapfile'],
       }
 
       exec { 'mkswap':
@@ -45,7 +49,7 @@ class swap(
         path    => '/bin:/sbin',
         unless  => "grep ^${swapfile_path} /proc/swaps",
         notify  => Exec['swapon'],
-        require => Exec['dd_swapfile'],
+        require => File[$swapfile_path],
       }
 
       exec { 'swapon':
@@ -53,36 +57,36 @@ class swap(
         path        => '/bin:/sbin',
         refreshonly => true,
       }
+
+      mount { 'swap':
+        ensure  => $ensure,
+        fstype  => 'swap',
+        device  => $swapfile_path,
+        options => 'defaults',
+        require => Exec['swapon'],        
+      }
     }
     else {
       exec { 'swapoff':
         command => "swapoff ${swapfile_path}",
         path    => '/bin:/sbin',
         onlyif  => "grep ^${swapfile_path} /proc/swaps",
-        notify  => File['swapfile'],
       }
-    }
 
-    file { 'swapfile':
-      ensure  => $ensure,
-      path    => $swapfile_path,
-      mode    => '0600',
-      owner   => 'root',
-      group   => 'root',
-      backup  => false,
-    }
+      file { $swapfile_path:
+        ensure  => $ensure,
+        backup  => false,
+        require => Exec['swapoff'],
+      }
 
-    mount { 'swapfile':
-      ensure  => $ensure,
-      name    => 'swap',
-      fstype  => 'swap',
-      device  => $swapfile_path,
-      options => 'defaults',
-      require => File['swapfile'],
+      mount { 'swap':
+        ensure  => $ensure,
+        device  => $swapfile_path,
+        require => Exec['swapoff'],
+      }
     }
   }
   else {
     notify {"Sorry, swap module only support Linux.":}
   }
-
 }
