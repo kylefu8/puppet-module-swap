@@ -17,7 +17,6 @@ class swap(
     }
     default: {
       $command_dir     = undef
-      $command_df_m    = undef
       $command_compare = undef
     }
   }
