@@ -18,7 +18,7 @@ This module is built for use with Puppet v3 on most Linux distributions.
 
 ensure
 ------
-Ensure attribute for the swapfile
+Main swtich of swap module.
 
 - *Default*: 'absent'
 
@@ -28,9 +28,15 @@ Reserved free space in megabytes (to avoid swap file consumes all the free space
 
 - *Default*: '2048'
 
+swapfile_action
+-------------
+Action for swap file, create or remove.
+
+- *Default*: 'create'
+
 swapfile_path
 -------------
-Swap file's full path
+Swap file's full path.
 
 - *Default*: '/swapfile'
 

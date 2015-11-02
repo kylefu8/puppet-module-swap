@@ -3,6 +3,7 @@
 class swap(
   $ensure                = 'absent',
   $threshold_m           = '2048',
+  $swapfile_action       = 'create',
   $swapfile_path         = '/swapfile',
   $swapfile_size_m       = '1024',
 ) {
@@ -23,69 +24,74 @@ class swap(
 
   validate_re($ensure, '^present|^absent', 'Valid values for ensure is present or absent')
   validate_re($threshold_m, '^[0-9]*$', 'Parameter threshold_m must be numeric')
+  validate_re($swapfile_action, '^create|^remove', 'Valid values for ensure is create or remove')
   validate_absolute_path($swapfile_path)
   validate_re($swapfile_size_m, '^[0-9]*$', 'Parameter swapfile_size_m must be numeric')
 
-  if ( $::kernel == 'Linux' ) {
-    if $ensure == 'present' {
-      exec { 'dd_swapfile':
-        command => "dd if=/dev/zero of=${swapfile_path} bs=1M count=${swapfile_size_m}",
-        path    => '/bin:/sbin:/usr/bin',
-        creates => $swapfile_path,
-        onlyif  => [ $command_dir, $command_compare ],
-      }
+  if $ensure == 'present' {
+    if ( $::kernel == 'Linux' ) {
+      if $swapfile_action == 'create' {
+        exec { 'dd_swapfile':
+          command => "dd if=/dev/zero of=${swapfile_path} bs=1M count=${swapfile_size_m}",
+          path    => '/bin:/sbin:/usr/bin',
+          creates => $swapfile_path,
+          onlyif  => [ $command_dir, $command_compare ],
+        }
 
-      file { $swapfile_path:
-        mode    => '0600',
-        owner   => 'root',
-        group   => 'root',
-        backup  => false,
-        require => Exec['dd_swapfile'],
-      }
+        file { $swapfile_path:
+          mode    => '0600',
+          owner   => 'root',
+          group   => 'root',
+          backup  => false,
+          require => Exec['dd_swapfile'],
+        }
 
-      exec { 'mkswap':
-        command => "mkswap ${swapfile_path}",
-        path    => '/bin:/sbin',
-        unless  => "grep ^${swapfile_path} /proc/swaps",
-        notify  => Exec['swapon'],
-        require => File[$swapfile_path],
-      }
+        exec { 'mkswap':
+          command => "mkswap ${swapfile_path}",
+          path    => '/bin:/sbin',
+          unless  => "grep ^${swapfile_path} /proc/swaps",
+          notify  => Exec['swapon'],
+          require => File[$swapfile_path],
+        }
 
-      exec { 'swapon':
-        command     => "swapon ${swapfile_path}",
-        path        => '/bin:/sbin',
-        refreshonly => true,
-      }
+        exec { 'swapon':
+          command     => "swapon ${swapfile_path}",
+          path        => '/bin:/sbin',
+          refreshonly => true,
+        }
 
-      mount { 'swap':
-        ensure  => $ensure,
-        fstype  => 'swap',
-        device  => $swapfile_path,
-        options => 'defaults',
-        require => Exec['swapon'],        
+        mount { 'swap':
+          ensure  => $ensure,
+          fstype  => 'swap',
+          device  => $swapfile_path,
+          options => 'defaults',
+          require => Exec['swapon'],
+        }
+      }
+      else {
+        exec { 'swapoff':
+          command => "swapoff ${swapfile_path}",
+          path    => '/bin:/sbin',
+          onlyif  => "grep ^${swapfile_path} /proc/swaps",
+        }
+
+        file { $swapfile_path:
+          ensure  => $ensure,
+          backup  => false,
+          require => Exec['swapoff'],
+        }
+
+        mount { 'swap':
+          ensure  => $ensure,
+          device  => $swapfile_path,
+          require => Exec['swapoff'],
+        }
       }
     }
     else {
-      exec { 'swapoff':
-        command => "swapoff ${swapfile_path}",
-        path    => '/bin:/sbin',
-        onlyif  => "grep ^${swapfile_path} /proc/swaps",
-      }
-
-      file { $swapfile_path:
-        ensure  => $ensure,
-        backup  => false,
-        require => Exec['swapoff'],
-      }
-
-      mount { 'swap':
-        ensure  => $ensure,
-        device  => $swapfile_path,
-        require => Exec['swapoff'],
-      }
+      notify {"Sorry, swap module only support Linux.":}
     }
-  }
   else {
-    notify {"Sorry, swap module only support Linux.":}
+    notify {"Sorry, swap module is disabled.":}
   }
 }
